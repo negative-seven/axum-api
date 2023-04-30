@@ -1,4 +1,6 @@
-use jsonwebtoken::{decode, encode, Algorithm, DecodingKey, EncodingKey, Header, Validation};
+use jsonwebtoken::{
+    decode, encode, errors::Error, Algorithm, DecodingKey, EncodingKey, Header, Validation,
+};
 use serde::{Deserialize, Serialize};
 use std::time::{Duration, SystemTime};
 
@@ -7,13 +9,12 @@ const LIFETIME_LEEWAY: Duration = Duration::from_secs(60);
 const ENCODING_ALGORITHM: Algorithm = Algorithm::HS256;
 const SECRET: &str = "secret"; // TODO: use proper secret!
 
-pub fn create() -> String {
+pub fn create() -> Result<String, Error> {
     encode(
         &Header::new(ENCODING_ALGORITHM),
         &Claims::new(),
         &EncodingKey::from_secret(SECRET.as_ref()),
     )
-    .expect("could not encode JWT")
 }
 
 pub fn is_valid(token: impl AsRef<str>) -> bool {

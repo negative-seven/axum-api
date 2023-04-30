@@ -17,14 +17,18 @@ pub fn create_router() -> Router<Arc<Mutex<ServerState>>> {
 
 #[allow(clippy::unused_async)]
 async fn login() -> impl IntoResponse {
-    let token = token::create();
+    let token = match token::create() {
+        Ok(result) => result,
+        Err(_) => return (StatusCode::INTERNAL_SERVER_ERROR, HeaderMap::default()),
+    };
 
     let mut response_headers = HeaderMap::new();
     response_headers.append(
         SET_COOKIE,
-        HeaderValue::from_str(&format!("api_token={token}; Secure; HttpOnly")).unwrap(),
+        HeaderValue::from_str(&format!("api_token={token}; Secure; HttpOnly"))
+            .expect("failed to convert cookie String to HeaderValue"),
     );
-    response_headers
+    (StatusCode::OK, response_headers)
 }
 
 #[allow(clippy::unused_async)]
