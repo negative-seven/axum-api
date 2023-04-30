@@ -1,44 +1,42 @@
-use crate::server_state::ServerState;
-use axum::{extract::State, routing::post, Json, Router};
-use serde_json::{json, Value};
+use crate::{server_state::ServerState, token};
+use axum::{
+    headers::Cookie,
+    http::{header::SET_COOKIE, HeaderMap, HeaderValue, StatusCode},
+    response::IntoResponse,
+    routing::{get, post},
+    Json, Router, TypedHeader,
+};
+use serde_json::json;
 use std::sync::{Arc, Mutex};
 
 pub fn create_router() -> Router<Arc<Mutex<ServerState>>> {
     Router::new()
         .route("/login", post(login))
-        .route("/logout", post(logout))
+        .route("/token", get(get_token))
 }
 
 #[allow(clippy::unused_async)]
-async fn login(
-    State(state): State<Arc<Mutex<ServerState>>>,
-    Json(body): Json<Value>,
-) -> Json<Value> {
-    let mut state = state.lock().unwrap();
-    let logged_in_old = state.logged_in;
-    state.logged_in = true;
-    Json(json!({
-        "login_message": body["message"],
-        "login_state": {
-            "old": logged_in_old,
-            "new": state.logged_in,
-        }
-    }))
+async fn login() -> impl IntoResponse {
+    let token = token::create();
+
+    let mut response_headers = HeaderMap::new();
+    response_headers.append(
+        SET_COOKIE,
+        HeaderValue::from_str(&format!("api_token={token}; Secure; HttpOnly")).unwrap(),
+    );
+    response_headers
 }
 
 #[allow(clippy::unused_async)]
-async fn logout(
-    State(state): State<Arc<Mutex<ServerState>>>,
-    Json(body): Json<Value>,
-) -> Json<Value> {
-    let mut state = state.lock().unwrap();
-    let logged_in_old = state.logged_in;
-    state.logged_in = false;
-    Json(json!({
-        "logout_message": body["message"],
-        "login_state": {
-            "old": logged_in_old,
-            "new": state.logged_in,
-        }
-    }))
+async fn get_token(TypedHeader(cookie): TypedHeader<Cookie>) -> impl IntoResponse {
+    match cookie.get("api_token") {
+        Some(token) => (
+            StatusCode::OK,
+            Json(json!({
+                "token": token,
+                "valid": token::is_valid(token)
+            })),
+        ),
+        None => (StatusCode::UNAUTHORIZED, Json::default()),
+    }
 }

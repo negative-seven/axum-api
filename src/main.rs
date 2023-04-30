@@ -1,6 +1,7 @@
 mod api;
 mod root;
 mod server_state;
+mod token;
 
 #[tokio::main]
 async fn main() {
