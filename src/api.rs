@@ -1,7 +1,7 @@
 use crate::{
     database::{self, Database},
     server_state::ServerState,
-    token,
+    token::TokenPayload,
 };
 use axum::{
     extract::State,
@@ -44,7 +44,7 @@ async fn login<D: Database>(
         return (StatusCode::UNAUTHORIZED, HeaderMap::default());
     }
 
-    let token = if let Ok(result) = token::create() {
+    let token = if let Ok(result) = TokenPayload::new().encode() {
         result
     } else {
         warn!("could not create token for user");
@@ -67,7 +67,7 @@ async fn get_token(TypedHeader(cookie): TypedHeader<Cookie>) -> impl IntoRespons
             StatusCode::OK,
             Json(json!({
                 "token": token,
-                "valid": token::is_valid(token)
+                "valid": TokenPayload::decode(token).is_ok()
             })),
         ),
         None => (StatusCode::UNAUTHORIZED, Json::default()),

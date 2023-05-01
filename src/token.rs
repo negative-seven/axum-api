@@ -9,32 +9,13 @@ const LIFETIME_LEEWAY: Duration = Duration::from_secs(60);
 const ENCODING_ALGORITHM: Algorithm = Algorithm::HS256;
 const SECRET: &str = "secret"; // TODO: use proper secret!
 
-pub fn create() -> Result<String, Error> {
-    encode(
-        &Header::new(ENCODING_ALGORITHM),
-        &Claims::new(),
-        &EncodingKey::from_secret(SECRET.as_ref()),
-    )
-}
-
-pub fn is_valid(token: impl AsRef<str>) -> bool {
-    let mut validation = Validation::new(ENCODING_ALGORITHM);
-    validation.leeway = LIFETIME_LEEWAY.as_secs();
-
-    decode::<Claims>(
-        token.as_ref(),
-        &DecodingKey::from_secret(SECRET.as_ref()),
-        &validation,
-    )
-    .is_ok()
-}
-
 #[derive(Serialize, Deserialize)]
-struct Claims {
+#[allow(clippy::module_name_repetitions)]
+pub struct TokenPayload {
     exp: u64,
 }
 
-impl Claims {
+impl TokenPayload {
     pub fn new() -> Self {
         Self {
             exp: (SystemTime::now() + LIFETIME)
@@ -42,5 +23,25 @@ impl Claims {
                 .expect("current time predates unix epoch, somehow")
                 .as_secs(),
         }
+    }
+
+    pub fn encode(&self) -> Result<String, Error> {
+        encode(
+            &Header::new(ENCODING_ALGORITHM),
+            self,
+            &EncodingKey::from_secret(SECRET.as_ref()),
+        )
+    }
+
+    pub fn decode(token: impl AsRef<str>) -> Result<Self, Error> {
+        let mut validation = Validation::new(ENCODING_ALGORITHM);
+        validation.leeway = LIFETIME_LEEWAY.as_secs();
+
+        Ok(decode::<TokenPayload>(
+            token.as_ref(),
+            &DecodingKey::from_secret(SECRET.as_ref()),
+            &validation,
+        )?
+        .claims)
     }
 }
