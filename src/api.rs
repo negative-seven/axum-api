@@ -1,4 +1,8 @@
-use crate::{database, server_state::ServerState, token};
+use crate::{
+    database::{self, Database},
+    server_state::ServerState,
+    token,
+};
 use axum::{
     extract::State,
     headers::Cookie,
@@ -10,26 +14,18 @@ use axum::{
 use serde_json::json;
 use tracing::{info, warn};
 
-pub fn create_router() -> Router<ServerState> {
+pub fn create_router<D: Database + 'static>() -> Router<ServerState<D>> {
     Router::new()
         .route("/register", post(register))
         .route("/login", post(login))
         .route("/token", get(get_token))
 }
 
-#[allow(clippy::unused_async)]
-async fn register(
-    State(state): State<ServerState>,
-    Json(body): Json<serde_json::Value>, // TODO: database::User directly?
+async fn register<D: Database>(
+    State(state): State<ServerState<D>>,
+    Json(user): Json<database::User>,
 ) -> impl IntoResponse {
-    let user: database::User = if let Ok(u) = serde_json::value::from_value(body) {
-        u
-    } else {
-        warn!("could not convert Value to User");
-        return StatusCode::UNPROCESSABLE_ENTITY;
-    };
-
-    if !state.database.try_add_user(user) {
+    if !state.database.try_add_user(user).await {
         // TODO: assumed to be an e-mail conflict, but other kinds of errors are
         // possible in the future
         info!("could not add new user to database due to email conflict with existing user");
@@ -39,12 +35,11 @@ async fn register(
     StatusCode::OK
 }
 
-#[allow(clippy::unused_async)]
-async fn login(
-    State(state): State<ServerState>,
+async fn login<D: Database>(
+    State(state): State<ServerState<D>>,
     Json(user): Json<database::User>,
 ) -> impl IntoResponse {
-    if !state.database.validate_user(&user) {
+    if !state.database.validate_user(&user).await {
         info!("invalid credentials provided during login");
         return (StatusCode::UNAUTHORIZED, HeaderMap::default());
     }

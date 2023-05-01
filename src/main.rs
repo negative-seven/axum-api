@@ -4,6 +4,8 @@ mod root;
 mod server_state;
 mod token;
 
+use database::ScyllaDbSession;
+use server_state::ServerState;
 use std::error::Error;
 use tracing_subscriber::EnvFilter;
 
@@ -14,7 +16,11 @@ async fn main() -> Result<(), Box<dyn Error>> {
         .init();
 
     axum::Server::bind(&"0.0.0.0:3000".parse()?)
-        .serve(root::create_router().into_make_service())
+        .serve(
+            root::create_router::<ScyllaDbSession>()
+                .with_state(ServerState::new().await?)
+                .into_make_service(),
+        )
         .await?;
 
     Ok(())
