@@ -1,4 +1,5 @@
 mod api;
+mod database;
 mod root;
 mod server_state;
 mod token;
