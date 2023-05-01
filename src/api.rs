@@ -5,8 +5,8 @@ use crate::{
 };
 use axum::{
     extract::State,
-    headers::Cookie,
-    http::{header::SET_COOKIE, HeaderMap, HeaderValue, StatusCode},
+    headers::{authorization::Bearer, Authorization},
+    http::StatusCode,
     response::IntoResponse,
     routing::{get, post},
     Json, Router, TypedHeader,
@@ -41,35 +41,26 @@ async fn login<D: Database>(
 ) -> impl IntoResponse {
     if !state.database.validate_user(&user).await {
         info!("invalid credentials provided during login");
-        return (StatusCode::UNAUTHORIZED, HeaderMap::default());
+        return (StatusCode::UNAUTHORIZED, Json::default());
     }
 
     let token = if let Ok(result) = TokenPayload::new().encode() {
         result
     } else {
         warn!("could not create token for user");
-        return (StatusCode::INTERNAL_SERVER_ERROR, HeaderMap::default());
+        return (StatusCode::INTERNAL_SERVER_ERROR, Json::default());
     };
 
-    let mut response_headers = HeaderMap::new();
-    response_headers.append(
-        SET_COOKIE,
-        HeaderValue::from_str(&format!("api_token={token}; Secure; HttpOnly"))
-            .expect("failed to convert cookie String to HeaderValue"),
-    );
-    (StatusCode::OK, response_headers)
+    (StatusCode::OK, Json(json!({ "token": token })))
 }
 
 #[allow(clippy::unused_async)]
-async fn get_token(TypedHeader(cookie): TypedHeader<Cookie>) -> impl IntoResponse {
-    match cookie.get("api_token") {
-        Some(token) => (
-            StatusCode::OK,
-            Json(json!({
-                "token": token,
-                "valid": TokenPayload::decode(token).is_ok()
-            })),
-        ),
-        None => (StatusCode::UNAUTHORIZED, Json::default()),
-    }
+async fn get_token(
+    TypedHeader(authorization): TypedHeader<Authorization<Bearer>>,
+) -> impl IntoResponse {
+    let token = authorization.token();
+    Json(json!({
+        "token": token,
+        "valid": TokenPayload::decode(token).is_ok()
+    }))
 }
