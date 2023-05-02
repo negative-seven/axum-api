@@ -29,10 +29,10 @@ async fn register<D: Database>(
         // TODO: assumed to be an e-mail conflict, but other kinds of errors are
         // possible in the future
         info!("could not add new user to database due to email conflict with existing user");
-        return StatusCode::CONFLICT;
+        return (StatusCode::CONFLICT, Json(json!({})));
     }
 
-    StatusCode::OK
+    (StatusCode::OK, Json(json!({})))
 }
 
 async fn login<D: Database>(

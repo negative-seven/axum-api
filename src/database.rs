@@ -40,7 +40,7 @@ impl ScyllaDbSession {
 }
 
 impl ScyllaDbSession {
-    pub async fn new(hostnames: &[impl AsRef<str>]) -> Result<Self, Box<dyn Error>> {
+    pub async fn new(hostnames: &[impl AsRef<str>]) -> Result<Self, Box<dyn Error + Send + Sync>> {
         debug!("creating ScyllaDB session");
 
         let session = SessionBuilder::new().known_nodes(hostnames).build().await?;
@@ -135,7 +135,7 @@ pub struct SimpleMemoryDatabase {
 }
 
 impl SimpleMemoryDatabase {
-    pub fn new() -> Result<Self, Box<dyn Error>> {
+    pub fn new() -> Result<Self, Box<dyn Error + Send + Sync>> {
         Ok(SimpleMemoryDatabase {
             users: Arc::new(Mutex::new(Vec::new())),
         })

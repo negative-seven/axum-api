@@ -8,7 +8,7 @@ pub struct ServerState<D: Database> {
 }
 
 impl<D: Database> ServerState<D> {
-    pub async fn new(database: D) -> Result<Self, Box<dyn Error>> {
+    pub async fn new(database: D) -> Result<Self, Box<dyn Error + Send + Sync>> {
         debug!("creating new ServerState");
 
         Ok(Self { database })

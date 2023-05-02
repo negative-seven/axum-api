@@ -12,7 +12,7 @@ use std::{error::Error, net::SocketAddr};
 pub async fn run_server<D: database::Database + 'static>(
     address: &SocketAddr,
     state: ServerState<D>,
-) -> Result<(), Box<dyn Error>> {
+) -> Result<(), Box<dyn Error + Send + Sync>> {
     axum::Server::bind(address)
         .serve(
             root::create_router::<D>()
