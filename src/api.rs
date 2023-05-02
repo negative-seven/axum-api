@@ -41,14 +41,14 @@ async fn login<D: Database>(
 ) -> impl IntoResponse {
     if !state.database.validate_user(&user).await {
         info!("invalid credentials provided during login");
-        return (StatusCode::UNAUTHORIZED, Json::default());
+        return (StatusCode::UNAUTHORIZED, Json(json!({})));
     }
 
     let token = if let Ok(result) = TokenPayload::new().encode() {
         result
     } else {
         warn!("could not create token for user");
-        return (StatusCode::INTERNAL_SERVER_ERROR, Json::default());
+        return (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({})));
     };
 
     (StatusCode::OK, Json(json!({ "token": token })))

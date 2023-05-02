@@ -6,6 +6,8 @@ edition = "2021"
 [dependencies]
 async-trait = "0.1.68"
 axum = { version = "0.6.17", features = ["headers", "tracing"] }
+base64 = "0.21.0"
+bcrypt = "0.14.0"
 jsonwebtoken = "8.3.0"
 scylla = "0.8.1"
 serde = "1.0.160"
