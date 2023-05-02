@@ -1,11 +1,4 @@
-mod api;
-mod database;
-mod root;
-mod server_state;
-mod token;
-
-use database::ScyllaDbSession;
-use server_state::ServerState;
+use axum_api::{database::ScyllaDbSession, run_server, ServerState};
 use std::error::Error;
 use tracing_subscriber::EnvFilter;
 
@@ -15,13 +8,10 @@ async fn main() -> Result<(), Box<dyn Error>> {
         .with_env_filter(EnvFilter::from_default_env())
         .init();
 
-    axum::Server::bind(&"0.0.0.0:3000".parse()?)
-        .serve(
-            root::create_router::<ScyllaDbSession>()
-                .with_state(ServerState::new().await?)
-                .into_make_service(),
-        )
-        .await?;
-
-    Ok(())
+    // TODO: make hosts configurable
+    run_server(
+        &"0.0.0.0:3000".parse()?,
+        ServerState::new(ScyllaDbSession::new(&["localhost:9042"]).await?).await?,
+    )
+    .await
 }

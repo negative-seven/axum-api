@@ -4,6 +4,7 @@ use jsonwebtoken::{
 use serde::{Deserialize, Serialize};
 use std::time::{Duration, SystemTime};
 
+// TODO: make these configurable
 const LIFETIME: Duration = Duration::from_secs(30 * 60);
 const LIFETIME_LEEWAY: Duration = Duration::from_secs(60);
 const ENCODING_ALGORITHM: Algorithm = Algorithm::HS256;

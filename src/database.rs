@@ -6,6 +6,7 @@ use std::{
     error::Error,
     sync::{Arc, Mutex},
 };
+use tokio::join;
 use tracing::{debug, error};
 
 #[derive(Clone, Serialize, Deserialize)]
@@ -16,7 +17,6 @@ pub struct User {
 
 #[async_trait]
 pub trait Database: Clone + Sync + Send {
-    async fn new() -> Result<Self, Box<dyn Error>>;
     async fn try_add_user(&self, user: User) -> bool;
     async fn validate_user(&self, user: &User) -> bool;
 }
@@ -29,6 +29,7 @@ pub struct ScyllaDbSession {
 }
 
 impl ScyllaDbSession {
+    // TODO: make these configurable
     const BCRYPT_COST: u32 = 13;
     const BCRYPT_VERSION_PREFIX: bcrypt::Version = bcrypt::Version::TwoA;
     const BCRYPT_BASE64_ENGINE: base64::engine::GeneralPurpose =
@@ -38,36 +39,32 @@ impl ScyllaDbSession {
         );
 }
 
-#[async_trait]
-impl Database for ScyllaDbSession {
-    async fn new() -> Result<Self, Box<dyn Error>> {
+impl ScyllaDbSession {
+    pub async fn new(hostnames: &[impl AsRef<str>]) -> Result<Self, Box<dyn Error>> {
         debug!("creating ScyllaDB session");
 
-        let session = SessionBuilder::new()
-            .known_node("localhost:9042")
-            .build()
-            .await?;
+        let session = SessionBuilder::new().known_nodes(hostnames).build().await?;
 
         debug!("preparing ScyllaDB statements");
 
-        let add_user_statement = Arc::new(
+        let (add_user_statement, get_password_statement) = join!(
+            session.prepare(
+                "INSERT INTO axum_api.users (email, password_hash, password_salt) VALUES (?, ?, ?)",
+            ),
             session
-                .prepare("INSERT INTO axum_api.users (email, password_hash, password_salt) VALUES (?, ?, ?)")
-                .await?,
-        );
-        let get_password_statement = Arc::new(
-            session
-                .prepare("SELECT password_hash, password_salt FROM axum_api.users WHERE email = ?")
-                .await?,
+                .prepare("SELECT password_hash, password_salt FROM axum_api.users WHERE email = ?"),
         );
 
         Ok(Self {
             session: Arc::new(session),
-            add_user_statement,
-            get_password_statement,
+            add_user_statement: Arc::new(add_user_statement?),
+            get_password_statement: Arc::new(get_password_statement?),
         })
     }
+}
 
+#[async_trait]
+impl Database for ScyllaDbSession {
     async fn try_add_user(&self, user: User) -> bool {
         let hashed_password = bcrypt::hash_with_result(user.password, Self::BCRYPT_COST)
             .expect("bcrypt hashing failed");
@@ -137,14 +134,16 @@ pub struct SimpleMemoryDatabase {
     users: Arc<Mutex<Vec<User>>>,
 }
 
-#[async_trait]
-impl Database for SimpleMemoryDatabase {
-    async fn new() -> Result<Self, Box<dyn Error>> {
+impl SimpleMemoryDatabase {
+    pub fn new() -> Result<Self, Box<dyn Error>> {
         Ok(SimpleMemoryDatabase {
             users: Arc::new(Mutex::new(Vec::new())),
         })
     }
+}
 
+#[async_trait]
+impl Database for SimpleMemoryDatabase {
     async fn try_add_user(&self, user: User) -> bool {
         let mut users = self.users.lock().unwrap();
 

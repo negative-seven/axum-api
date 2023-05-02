@@ -8,11 +8,9 @@ pub struct ServerState<D: Database> {
 }
 
 impl<D: Database> ServerState<D> {
-    pub async fn new() -> Result<Self, Box<dyn Error>> {
+    pub async fn new(database: D) -> Result<Self, Box<dyn Error>> {
         debug!("creating new ServerState");
 
-        Ok(Self {
-            database: D::new().await?,
-        })
+        Ok(Self { database })
     }
 }
