@@ -1,3 +1,5 @@
+//! API routing.
+
 use crate::{
     database::{self, Database},
     server_state::ServerState,
@@ -14,6 +16,7 @@ use axum::{
 use serde_json::json;
 use tracing::{info, warn};
 
+/// Creates a router for API endpoints.
 pub fn create_router<D: Database + 'static>() -> Router<ServerState<D>> {
     Router::new()
         .route("/register", post(register))
@@ -21,6 +24,7 @@ pub fn create_router<D: Database + 'static>() -> Router<ServerState<D>> {
         .route("/token", get(get_token))
 }
 
+/// Handler for user registration.
 async fn register<D: Database>(
     State(state): State<ServerState<D>>,
     Json(user): Json<database::User>,
@@ -35,6 +39,7 @@ async fn register<D: Database>(
     (StatusCode::OK, Json(json!({})))
 }
 
+/// Handler for generating an API token for a user.
 async fn login<D: Database>(
     State(state): State<ServerState<D>>,
     Json(user): Json<database::User>,
@@ -54,6 +59,7 @@ async fn login<D: Database>(
     (StatusCode::OK, Json(json!({ "token": token })))
 }
 
+/// Handler for checking the validity of a token.
 #[allow(clippy::unused_async)]
 async fn get_token(
     TypedHeader(authorization): TypedHeader<Authorization<Bearer>>,

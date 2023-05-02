@@ -17,9 +17,9 @@ pub async fn with_server(
     let server_task = task::spawn(async {
         axum_api::run_server(
             &ADDRESS.parse().unwrap(),
-            ServerState::new(SimpleMemoryDatabase::new().unwrap())
-                .await
-                .unwrap(),
+            ServerState {
+                database: SimpleMemoryDatabase::new(),
+            },
         )
         .await
     });

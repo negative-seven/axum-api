@@ -1,3 +1,5 @@
+//! Structs and traits related to database access.
+
 use axum::async_trait;
 use base64::Engine;
 use scylla::{prepared_statement::PreparedStatement, Session, SessionBuilder};
@@ -9,18 +11,21 @@ use std::{
 use tokio::join;
 use tracing::{debug, error};
 
+/// The model for a User in a database.
 #[derive(Clone, Serialize, Deserialize)]
 pub struct User {
     pub email: String,
     pub password: String,
 }
 
+/// Trait for database access types.
 #[async_trait]
 pub trait Database: Clone + Sync + Send {
     async fn try_add_user(&self, user: User) -> bool;
     async fn validate_user(&self, user: &User) -> bool;
 }
 
+/// A ``ScyllaDB`` session.
 #[derive(Clone)]
 pub struct ScyllaDbSession {
     session: Arc<Session>,
@@ -40,6 +45,12 @@ impl ScyllaDbSession {
 }
 
 impl ScyllaDbSession {
+    /// Creates a ``ScyllaDB`` session.
+    ///
+    /// # Errors
+    ///
+    /// If the session or a prepared statement cannot be created, returns an
+    /// appropriate error.
     pub async fn new(hostnames: &[impl AsRef<str>]) -> Result<Self, Box<dyn Error + Send + Sync>> {
         debug!("creating ScyllaDB session");
 
@@ -128,6 +139,7 @@ impl Database for ScyllaDbSession {
     }
 }
 
+/// A simple, in-memory database with no password hashing.
 #[derive(Clone)]
 #[allow(clippy::module_name_repetitions)]
 pub struct SimpleMemoryDatabase {
@@ -135,10 +147,18 @@ pub struct SimpleMemoryDatabase {
 }
 
 impl SimpleMemoryDatabase {
-    pub fn new() -> Result<Self, Box<dyn Error + Send + Sync>> {
-        Ok(SimpleMemoryDatabase {
+    /// Creates a database containing no records.
+    #[must_use]
+    pub fn new() -> Self {
+        Self {
             users: Arc::new(Mutex::new(Vec::new())),
-        })
+        }
+    }
+}
+
+impl Default for SimpleMemoryDatabase {
+    fn default() -> Self {
+        Self::new()
     }
 }
 

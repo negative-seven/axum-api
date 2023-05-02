@@ -11,7 +11,9 @@ async fn main() -> Result<(), Box<dyn Error + Send + Sync>> {
     // TODO: make hosts configurable
     run_server(
         &"0.0.0.0:3000".parse()?,
-        ServerState::new(ScyllaDbSession::new(&["localhost:9042"]).await?).await?,
+        ServerState {
+            database: ScyllaDbSession::new(&["localhost:9042"]).await?,
+        },
     )
     .await
 }
