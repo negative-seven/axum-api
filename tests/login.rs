@@ -16,7 +16,10 @@ async fn login_without_account() -> Result<(), Box<dyn Error>> {
         )
         .await;
         assert_eq!(response.status_code, StatusCode::UNAUTHORIZED);
-        assert!(!response.body.contains_key("token"));
+        assert!(match response.body {
+            Some(body) => !body.contains_key("token"),
+            None => true,
+        });
 
         Ok(())
     })
@@ -49,7 +52,10 @@ async fn login_with_wrong_password() -> Result<(), Box<dyn Error>> {
             .await;
 
             assert_eq!(response.status_code, StatusCode::UNAUTHORIZED);
-            assert!(!response.body.contains_key("token"));
+            assert!(match response.body {
+                Some(body) => !body.contains_key("token"),
+                None => true,
+            });
         }
 
         Ok(())
@@ -74,7 +80,10 @@ async fn login_with_correct_password() -> Result<(), Box<dyn Error>> {
         .await;
 
         assert_eq!(response.status_code, StatusCode::OK);
-        assert!(response.body.contains_key("token"));
+        assert!(response
+            .body
+            .expect("response body could not be parsed as JSON object")
+            .contains_key("token"));
 
         Ok(())
     })

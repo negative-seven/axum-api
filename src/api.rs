@@ -32,10 +32,10 @@ async fn register<D: Database>(
         // TODO: assumed to be an e-mail conflict, but other kinds of errors are
         // possible in the future
         info!("could not add new user to database due to email conflict with existing user");
-        return (StatusCode::CONFLICT, Json(json!({})));
+        return StatusCode::CONFLICT;
     }
 
-    (StatusCode::OK, Json(json!({})))
+    StatusCode::OK
 }
 
 /// Handler for generating an API token for a user.
@@ -45,17 +45,17 @@ async fn login<D: Database>(
 ) -> impl IntoResponse {
     if !state.database().validate_user(&user).await {
         info!("invalid credentials provided during login");
-        return (StatusCode::UNAUTHORIZED, Json(json!({})));
+        return (StatusCode::UNAUTHORIZED, "").into_response();
     }
 
     let token = if let Ok(result) = state.token_manager().new_token() {
         result
     } else {
         warn!("could not create token for user");
-        return (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({})));
+        return (StatusCode::INTERNAL_SERVER_ERROR, "").into_response();
     };
 
-    (StatusCode::OK, Json(json!({ "token": token })))
+    (StatusCode::OK, Json(json!({ "token": token }))).into_response()
 }
 
 /// Handler for checking the validity of a token.

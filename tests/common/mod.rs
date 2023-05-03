@@ -8,7 +8,7 @@ const ADDRESS: &str = "127.0.0.1:29200";
 
 pub struct Response {
     pub status_code: StatusCode,
-    pub body: Map<String, Value>,
+    pub body: Option<Map<String, Value>>,
 }
 
 pub async fn with_server(
@@ -46,9 +46,6 @@ pub async fn post(endpoint: impl AsRef<str>, json: Value) -> Response {
 
     Response {
         status_code: response.status(),
-        body: response
-            .json::<Map<String, Value>>()
-            .await
-            .expect("cannot parse body as JSON object"),
+        body: response.json::<Map<String, Value>>().await.ok(),
     }
 }
