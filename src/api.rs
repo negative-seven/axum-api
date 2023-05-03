@@ -16,7 +16,7 @@ use serde_json::json;
 use tracing::{info, warn};
 
 /// Creates a router for API endpoints.
-pub fn create_router<D: Database + 'static>() -> Router<ServerState<D>> {
+pub fn create_api_router<D: Database + 'static>() -> Router<ServerState<D>> {
     Router::new()
         .route("/register", post(register))
         .route("/login", post(login))

@@ -1,4 +1,6 @@
-use axum_api::{database::SimpleMemoryDatabase, token::TokenManager, ServerState};
+use axum_api::{
+    create_api_router, database::SimpleMemoryDatabase, token::TokenManager, ServerState,
+};
 use reqwest::StatusCode;
 use serde_json::{Map, Value};
 use std::{error::Error, future::Future, time::Duration};
@@ -15,19 +17,17 @@ pub async fn with_server(
     future: impl Future<Output = Result<(), Box<dyn Error>>>,
 ) -> Result<(), Box<dyn Error>> {
     let server_task = task::spawn(async {
-        axum_api::run_server(
-            &ADDRESS.parse().unwrap(),
-            ServerState::new(
-                SimpleMemoryDatabase::new(),
-                TokenManager::new(
-                    Duration::from_secs(10u64.pow(10)),
-                    Duration::from_secs(10u64.pow(10)),
-                    jsonwebtoken::Algorithm::HS256,
-                    "secret".into(),
-                ),
+        let state = ServerState::new(
+            SimpleMemoryDatabase::new(),
+            TokenManager::new(
+                Duration::from_secs(10u64.pow(10)),
+                Duration::from_secs(10u64.pow(10)),
+                jsonwebtoken::Algorithm::HS256,
+                "secret".into(),
             ),
-        )
-        .await
+        );
+        axum::Server::bind(&ADDRESS.parse().unwrap())
+            .serve(create_api_router().with_state(state).into_make_service()).await
     });
 
     let return_value = future.await;
@@ -37,7 +37,7 @@ pub async fn with_server(
 
 pub async fn post(endpoint: impl AsRef<str>, json: Value) -> Response {
     let response = reqwest::Client::new()
-        .post(format!("http://{ADDRESS}/api/{}", endpoint.as_ref()))
+        .post(format!("http://{ADDRESS}/{}", endpoint.as_ref()))
         .json(&json)
         .send()
         .await
