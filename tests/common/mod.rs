@@ -1,4 +1,4 @@
-use axum_api::{database::SimpleMemoryDatabase, ServerState, TokenManager};
+use axum_api::{database::SimpleMemoryDatabase, token::TokenManager, ServerState};
 use reqwest::StatusCode;
 use serde_json::{Map, Value};
 use std::{error::Error, future::Future, time::Duration};
@@ -20,8 +20,8 @@ pub async fn with_server(
             ServerState::new(
                 SimpleMemoryDatabase::new(),
                 TokenManager::new(
-                    Duration::MAX,
-                    Duration::MAX,
+                    Duration::from_secs(10u64.pow(10)),
+                    Duration::from_secs(10u64.pow(10)),
                     jsonwebtoken::Algorithm::HS256,
                     "secret".into(),
                 ),

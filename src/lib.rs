@@ -2,10 +2,9 @@ pub mod api;
 pub mod database;
 pub mod root;
 mod server_state;
-mod token;
+pub mod token;
 
 pub use server_state::ServerState;
-pub use token::{TokenManager, TokenPayload};
 
 use std::{error::Error, net::SocketAddr};
 
@@ -22,15 +21,22 @@ use std::{error::Error, net::SocketAddr};
 /// # Example
 ///
 /// ```no_run
-/// use axum_api::{database::SimpleMemoryDatabase, run_server, ServerState};
+/// use axum_api::{database::SimpleMemoryDatabase, run_server, token::TokenManager, ServerState};
+/// use std::fs;
+/// use std::time::Duration;
 /// use tokio::task;
 ///
+/// let database = SimpleMemoryDatabase::new();
+/// let token_manager = TokenManager::new(
+///     Duration::from_secs(10 * 60),
+///     Duration::from_secs(20),
+///     jsonwebtoken::Algorithm::RS512,
+///     fs::read_to_string("secret").expect("could not read secret from file"),
+/// );
 /// task::spawn(async {
 ///     run_server(
 ///         &"172.16.0.1:3000".parse().expect("could not parse address"),
-///         ServerState::new(SimpleMemoryDatabase::new().expect("could not create database"))
-///             .await
-///             .expect("could not create server state"),
+///         ServerState::new(database, token_manager),
 ///     )
 ///     .await
 ///     .expect("encountered server error");

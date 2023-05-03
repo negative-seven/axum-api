@@ -1,4 +1,4 @@
-use axum_api::{database::ScyllaDbSession, run_server, ServerState, TokenManager};
+use axum_api::{database::ScyllaDbSession, run_server, token::TokenManager, ServerState};
 use std::{error::Error, time::Duration};
 use tracing_subscriber::EnvFilter;
 
