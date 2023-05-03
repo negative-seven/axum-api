@@ -1,6 +1,6 @@
 # axum_api
 
-Simple, extendable REST API service utilizing the [axum](https://crates.io/crates/axum) framework.
+Simple, extensible REST API service utilizing the [axum](https://crates.io/crates/axum) framework.
 
 ## Usage
 

@@ -1,4 +1,4 @@
-//! Simple, extendable REST API service utilizing the [axum](axum) framework.
+//! Simple, extensible REST API service utilizing the [axum](axum) framework.
 //!
 //! This crate provides a [`Router`](axum::Router) for API endpoints. A `main` function is also
 //! given, which allows for easily running a simple server that reroutes all API
