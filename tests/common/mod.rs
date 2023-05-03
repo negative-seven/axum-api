@@ -1,7 +1,7 @@
-use axum_api::{database::SimpleMemoryDatabase, ServerState};
+use axum_api::{database::SimpleMemoryDatabase, ServerState, TokenManager};
 use reqwest::StatusCode;
 use serde_json::{Map, Value};
-use std::{error::Error, future::Future};
+use std::{error::Error, future::Future, time::Duration};
 use tokio::task;
 
 const ADDRESS: &str = "127.0.0.1:29200";
@@ -17,9 +17,15 @@ pub async fn with_server(
     let server_task = task::spawn(async {
         axum_api::run_server(
             &ADDRESS.parse().unwrap(),
-            ServerState {
-                database: SimpleMemoryDatabase::new(),
-            },
+            ServerState::new(
+                SimpleMemoryDatabase::new(),
+                TokenManager::new(
+                    Duration::MAX,
+                    Duration::MAX,
+                    jsonwebtoken::Algorithm::HS256,
+                    "secret".into(),
+                ),
+            ),
         )
         .await
     });

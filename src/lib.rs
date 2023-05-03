@@ -5,7 +5,7 @@ mod server_state;
 mod token;
 
 pub use server_state::ServerState;
-pub use token::TokenPayload;
+pub use token::{TokenManager, TokenPayload};
 
 use std::{error::Error, net::SocketAddr};
 

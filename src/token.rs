@@ -2,29 +2,95 @@ use jsonwebtoken::{
     decode, encode, errors::Error, Algorithm, DecodingKey, EncodingKey, Header, Validation,
 };
 use serde::{Deserialize, Serialize};
-use std::time::{Duration, SystemTime};
+use std::{time::{Duration, SystemTime}, sync::Arc};
 
-// TODO: make these configurable
-const LIFETIME: Duration = Duration::from_secs(30 * 60);
-const LIFETIME_LEEWAY: Duration = Duration::from_secs(60);
-const ENCODING_ALGORITHM: Algorithm = Algorithm::HS256;
-const SECRET: &str = "secret"; // TODO: use proper secret!
+/// Configurable manager for JSON web tokens for API access.
+#[allow(clippy::module_name_repetitions)]
+pub struct TokenManager {
+    lifetime: Duration,
+    lifetime_leeway: Duration,
+    encoding_algorithm: Algorithm,
+    secret: Arc<String>,
+}
+
+impl TokenManager {
+    /// Creates a new token manager.
+    #[must_use]
+    pub fn new(
+        lifetime: Duration,
+        lifetime_leeway: Duration,
+        encoding_algorithm: Algorithm,
+        secret: String,
+    ) -> Self {
+        Self {
+            lifetime,
+            lifetime_leeway,
+            encoding_algorithm,
+            secret: Arc::new(secret),
+        }
+    }
+
+    #[must_use]
+    pub fn lifetime(&self) -> Duration {
+        self.lifetime
+    }
+
+    #[must_use]
+    pub fn lifetime_mut(&mut self) -> &mut Duration {
+        &mut self.lifetime
+    }
+
+    #[must_use]
+    pub fn lifetime_leeway(&self) -> Duration {
+        self.lifetime_leeway
+    }
+
+    #[must_use]
+    pub fn lifetime_leeway_mut(&mut self) -> &mut Duration {
+        &mut self.lifetime_leeway
+    }
+
+    /// Creates a new token according to the `TokenManager` configuration.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if token encoding fails.
+    pub fn new_token(&self) -> Result<String, Error> {
+        let payload = TokenPayload::new(self.lifetime);
+        payload.encode(self.encoding_algorithm, &self.secret)
+    }
+
+    /// Decodes a token into a payload according to the `TokenManager`
+    /// configuration.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if decoding fails or if the token is invalid.
+    pub fn decode_and_validate_token(&self, token: String) -> Result<TokenPayload, Error> {
+        TokenPayload::decode(
+            token,
+            self.encoding_algorithm,
+            &self.secret,
+            self.lifetime_leeway,
+        )
+    }
+}
 
 /// The payload of a JSON web token for API access
 #[derive(Serialize, Deserialize)]
 #[allow(clippy::module_name_repetitions)]
 pub struct TokenPayload {
-    exp: u64,
+    pub exp: u64,
 }
 
 impl TokenPayload {
     /// Creates a payload object.
     #[must_use]
-    pub fn new() -> Self {
+    fn new(lifetime: Duration) -> Self {
         Self {
-            exp: (SystemTime::now() + LIFETIME)
+            exp: (SystemTime::now() + lifetime)
                 .duration_since(SystemTime::UNIX_EPOCH)
-                .expect("current time predates unix epoch, somehow")
+                .expect("token expiry time predates unix epoch, somehow")
                 .as_secs(),
         }
     }
@@ -34,11 +100,11 @@ impl TokenPayload {
     /// # Errors
     ///
     /// Returns an error if encoding fails.
-    pub fn encode(&self) -> Result<String, Error> {
+    fn encode(&self, encoding_algorithm: Algorithm, secret: &str) -> Result<String, Error> {
         encode(
-            &Header::new(ENCODING_ALGORITHM),
+            &Header::new(encoding_algorithm),
             self,
-            &EncodingKey::from_secret(SECRET.as_ref()),
+            &EncodingKey::from_secret(secret.as_ref()),
         )
     }
 
@@ -47,21 +113,20 @@ impl TokenPayload {
     /// # Errors
     ///
     /// Returns an error if decoding fails.
-    pub fn decode(token: impl AsRef<str>) -> Result<Self, Error> {
-        let mut validation = Validation::new(ENCODING_ALGORITHM);
-        validation.leeway = LIFETIME_LEEWAY.as_secs();
+    fn decode(
+        token: impl AsRef<str>,
+        decoding_algorithm: Algorithm,
+        secret: &str,
+        lifetime_leeway: Duration,
+    ) -> Result<Self, Error> {
+        let mut validation = Validation::new(decoding_algorithm);
+        validation.leeway = lifetime_leeway.as_secs();
 
         Ok(decode::<TokenPayload>(
             token.as_ref(),
-            &DecodingKey::from_secret(SECRET.as_ref()),
+            &DecodingKey::from_secret(secret.as_ref()),
             &validation,
         )?
         .claims)
-    }
-}
-
-impl Default for TokenPayload {
-    fn default() -> Self {
-        Self::new()
     }
 }

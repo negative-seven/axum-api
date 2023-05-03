@@ -3,7 +3,6 @@
 use crate::{
     database::{self, Database},
     server_state::ServerState,
-    token::TokenPayload,
 };
 use axum::{
     extract::State,
@@ -29,7 +28,7 @@ async fn register<D: Database>(
     State(state): State<ServerState<D>>,
     Json(user): Json<database::User>,
 ) -> impl IntoResponse {
-    if !state.database.try_add_user(user).await {
+    if !state.database().try_add_user(user).await {
         // TODO: assumed to be an e-mail conflict, but other kinds of errors are
         // possible in the future
         info!("could not add new user to database due to email conflict with existing user");
@@ -44,12 +43,12 @@ async fn login<D: Database>(
     State(state): State<ServerState<D>>,
     Json(user): Json<database::User>,
 ) -> impl IntoResponse {
-    if !state.database.validate_user(&user).await {
+    if !state.database().validate_user(&user).await {
         info!("invalid credentials provided during login");
         return (StatusCode::UNAUTHORIZED, Json(json!({})));
     }
 
-    let token = if let Ok(result) = TokenPayload::new().encode() {
+    let token = if let Ok(result) = state.token_manager().new_token() {
         result
     } else {
         warn!("could not create token for user");
@@ -61,12 +60,13 @@ async fn login<D: Database>(
 
 /// Handler for checking the validity of a token.
 #[allow(clippy::unused_async)]
-async fn get_token(
+async fn get_token<D: Database>(
+    State(state): State<ServerState<D>>,
     TypedHeader(authorization): TypedHeader<Authorization<Bearer>>,
 ) -> impl IntoResponse {
     let token = authorization.token();
     Json(json!({
         "token": token,
-        "valid": TokenPayload::decode(token).is_ok()
+        "valid": state.token_manager().decode_and_validate_token(token.into()).is_ok()
     }))
 }
