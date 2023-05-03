@@ -34,8 +34,7 @@ pub struct ScyllaDbSession {
 }
 
 impl ScyllaDbSession {
-    // TODO: make these configurable
-    const BCRYPT_COST: u32 = 13;
+    const BCRYPT_COST: u32 = 13; // TODO: make this configurable
     const BCRYPT_VERSION_PREFIX: bcrypt::Version = bcrypt::Version::TwoA;
     const BCRYPT_BASE64_ENGINE: base64::engine::GeneralPurpose =
         base64::engine::GeneralPurpose::new(
