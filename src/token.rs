@@ -1,3 +1,5 @@
+//! Generation of JSON web tokens for API access.
+
 use jsonwebtoken::{
     decode, encode, errors::Error, Algorithm, DecodingKey, EncodingKey, Header, Validation,
 };

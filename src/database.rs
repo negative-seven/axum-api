@@ -1,4 +1,4 @@
-//! Structs and traits related to database access.
+//! Database access.
 
 use axum::async_trait;
 use base64::Engine;
