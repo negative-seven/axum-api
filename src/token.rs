@@ -2,7 +2,12 @@ use jsonwebtoken::{
     decode, encode, errors::Error, Algorithm, DecodingKey, EncodingKey, Header, Validation,
 };
 use serde::{Deserialize, Serialize};
-use std::{time::{Duration, SystemTime}, sync::Arc};
+use std::{
+    sync::Arc,
+    time::{Duration, SystemTime},
+};
+
+use crate::database::User;
 
 /// Configurable manager for JSON web tokens for API access.
 #[allow(clippy::module_name_repetitions)]
@@ -55,8 +60,8 @@ impl TokenManager {
     /// # Errors
     ///
     /// Returns an error if token encoding fails.
-    pub fn new_token(&self) -> Result<String, Error> {
-        let payload = TokenPayload::new(self.lifetime);
+    pub fn new_token(&self, user: &User) -> Result<String, Error> {
+        let payload = TokenPayload::new(user, self.lifetime);
         payload.encode(self.encoding_algorithm, &self.secret)
     }
 
@@ -81,17 +86,19 @@ impl TokenManager {
 #[allow(clippy::module_name_repetitions)]
 pub struct TokenPayload {
     pub exp: u64,
+    pub user_email: String,
 }
 
 impl TokenPayload {
     /// Creates a payload object.
     #[must_use]
-    fn new(lifetime: Duration) -> Self {
+    fn new(user: &User, lifetime: Duration) -> Self {
         Self {
             exp: (SystemTime::now() + lifetime)
                 .duration_since(SystemTime::UNIX_EPOCH)
                 .expect("token expiry time predates unix epoch, somehow")
                 .as_secs(),
+            user_email: user.email.clone(),
         }
     }
 

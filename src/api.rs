@@ -48,7 +48,7 @@ async fn login<D: Database>(
         return (StatusCode::UNAUTHORIZED, "").into_response();
     }
 
-    let token = if let Ok(result) = state.token_manager().new_token() {
+    let token = if let Ok(result) = state.token_manager().new_token(&user) {
         result
     } else {
         warn!("could not create token for user");
@@ -65,8 +65,14 @@ async fn get_token<D: Database>(
     TypedHeader(authorization): TypedHeader<Authorization<Bearer>>,
 ) -> impl IntoResponse {
     let token = authorization.token();
-    Json(json!({
-        "token": token,
-        "valid": state.token_manager().decode_and_validate_token(token.into()).is_ok()
-    }))
+    let token_payload = state
+        .token_manager()
+        .decode_and_validate_token(token.into());
+
+    let mut response = json!({"token": token, "valid": token_payload.is_ok()});
+    if let Ok(payload) = token_payload {
+        response["user_email"] = payload.user_email.into();
+    };
+
+    Json(response)
 }
